@@ -42,8 +42,16 @@ async def websocket_endpoint(websocket: WebSocket):
             prediction = model.predict(image_array)
             predicted_digit = np.argmax(prediction)
 
-            # Envia a previsão de volta para o frontend
-            await websocket.send_text(str(predicted_digit))
+            # Acurácia (probabilidade)
+            predicted_accuracy = float(np.max(prediction))
+
+            # Envia o número predito e a acurácia de volta para o frontend
+            response = {
+                "predicted_number": int(predicted_digit),
+                "predicted_accuracy": predicted_accuracy
+            }
+            await websocket.send_json(response)
+
     except Exception as e:
         print(f"Erro: {e}")
     finally:
