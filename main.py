@@ -8,16 +8,16 @@ import base64
 
 app = FastAPI()
 
-# Carregar o modelo treinado
-model = tf.keras.models.load_model('modelo_treinado.h5')
+# load the trained model
+model = tf.keras.models.load_model('cnn_model.h5')
 
 
-# Rota para teste de conexão
+# Main route
 @app.get("/")
 def read_root():
-    return HTMLResponse(content="<h1> API de reconhecimento de letra</h1>")
+    return HTMLResponse(content="<h1> API: handwritten digits recognition </h1>")
 
-# WebSocket para receber imagens e enviar previsões
+# WebSocket route
 
 
 @app.websocket("/ws")
@@ -25,27 +25,29 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
-            # Recebe a imagem codificada em base64 do frontend
+            # Receives the base64 encoded image from frontend
             data = await websocket.receive_text()
 
-            # Decodifica a imagem base64
+            # Decodes the base64 image
             image_data = base64.b64decode(data.split(",")[1])
+            # Convert to grayscale
             image = Image.open(io.BytesIO(image_data)).convert(
-                'L')  # Converte para tons de cinza
-            image = image.resize((28, 28))  # Redimensiona para 28x28 pixels
+                'L')
+            # Resize to 28x28 pixels
+            image = image.resize((28, 28))
 
-            # Pré-processamento da imagem
+            # Pre-processing of the image
             image_array = np.array(image).reshape(
                 1, 28, 28, 1).astype('float32') / 255
 
-            # Faz a previsão usando o modelo
+            # Do the prediction using the trained model
             prediction = model.predict(image_array)
             predicted_digit = np.argmax(prediction)
 
-            # Acurácia (probabilidade)
+            # Accuracy
             predicted_accuracy = float(np.max(prediction))
 
-            # Envia o número predito e a acurácia de volta para o frontend
+            # Sends the predicted number and accuracy back to the frontend
             response = {
                 "predicted_number": int(predicted_digit),
                 "predicted_accuracy": predicted_accuracy
@@ -57,7 +59,7 @@ async def websocket_endpoint(websocket: WebSocket):
     finally:
         await websocket.close()
 
-# Iniciar o servidor
+# Start the server with: uvicorn main:app --reload
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
